@@ -1,0 +1,515 @@
+
+
+-- 1. Otel Tablosu
+CREATE TABLE Otel (
+    Otel_id INT IDENTITY PRIMARY KEY,          -- Otel benzersiz kimlik numarası (otomatik artar)
+    Otel_Adi VARCHAR(100),                     -- Otel adı
+    Konum VARCHAR(100),                        -- Otel konumu
+    Puan DECIMAL(3, 2)                         -- Otel puanı
+);
+-- 2. Oda Tablosu (Otel tablosu oluşturulduktan sonra)
+CREATE TABLE Oda (
+    Oda_id INT IDENTITY PRIMARY KEY,           -- Oda benzersiz kimlik numarası (otomatik artar)
+    Oda_Tipi VARCHAR(50),                      -- Oda tipi (Tek kişilik, Çift kişilik, Süit vb.)
+    Fiyat DECIMAL(10, 2),                      -- Oda fiyatı
+    Musaitlik BIT,                             -- Oda müsaitlik durumu
+    Otel_id INT,                               -- İlişkili otel kimliği (Foreign Key)
+    FOREIGN KEY (Otel_id) REFERENCES Otel(Otel_id)  -- Otel tablosuna yabancı anahtar ilişkisi
+);
+-- 3. Müşteri Tablosu
+CREATE TABLE Musteri (
+    Musteri_id INT IDENTITY PRIMARY KEY,      -- Müşteri benzersiz kimlik numarası (otomatik artar)
+    AdiSoyad VARCHAR(100),                    -- Müşteri ad soyadı
+    Telefon VARCHAR(20),                      -- Müşteri telefon numarası
+    Email VARCHAR(100),                       -- Müşteri e-posta adresi
+    Dogum_Tarihi DATE                         -- Müşteri doğum tarihi
+);
+-- 4. Oda Özellikleri Tablosu
+CREATE TABLE Oda_Ozellikleri (
+    Ozellik_id INT IDENTITY PRIMARY KEY,      -- Özellik benzersiz kimlik numarası (otomatik artar)
+    Ozellik_Adi VARCHAR(100),                 -- Özellik adı (Wi-Fi, Klima, Mini Bar vb.)
+    Oda_id INT,                               -- İlişkili oda kimliği (Foreign Key)
+    FOREIGN KEY (Oda_id) REFERENCES Oda(Oda_id)  -- Oda tablosuna yabancı anahtar ilişkisi
+);
+-- 5. Rezervasyon Tablosu
+CREATE TABLE Rezervasyon (
+    Rezervasyon_id INT IDENTITY PRIMARY KEY,  -- Rezervasyon benzersiz kimlik numarası (otomatik artar)
+    Baslangic_Tarihi DATE,                    -- Rezervasyon başlangıç tarihi
+    Bitis_Tarihi DATE,                        -- Rezervasyon bitiş tarihi
+    Musteri_id INT,                           -- İlişkili müşteri kimliği (Foreign Key)
+    Oda_id INT,                               -- İlişkili oda kimliği (Foreign Key)
+    FOREIGN KEY (Musteri_id) REFERENCES Musteri(Musteri_id),  -- Musteri tablosuna yabancı anahtar ilişkisi
+    FOREIGN KEY (Oda_id) REFERENCES Oda(Oda_id)  -- Oda tablosuna yabancı anahtar ilişkisi
+);
+-- 6. Fatura Tablosu
+CREATE TABLE Fatura (
+    Fatura_id INT IDENTITY PRIMARY KEY,       -- Fatura benzersiz kimlik numarası (otomatik artar)
+    Tutar DECIMAL(10, 2),                     -- Ödeme miktarı
+    Tarih DATE,                               -- Ödeme tarihi
+    Rezervasyon_id INT,                       -- İlişkili rezervasyon kimliği (Foreign Key)
+    Musteri_id INT,                           -- İlişkili müşteri kimliği (Foreign Key)
+    FOREIGN KEY (Rezervasyon_id) REFERENCES Rezervasyon(Rezervasyon_id),  -- Rezervasyon tablosuna yabancı anahtar ilişkisi
+    FOREIGN KEY (Musteri_id) REFERENCES Musteri(Musteri_id)  -- Musteri tablosuna yabancı anahtar ilişkisi
+);
+
+-- 7. Hizmet Tablosu
+CREATE TABLE Hizmet (
+    Hizmet_id INT IDENTITY PRIMARY KEY,       -- Hizmet benzersiz kimlik numarası (otomatik artar)
+    Hizmet_Turu VARCHAR(100),                 -- Hizmet türü (Oda servisi, restoran vb.)
+    Hizmet_Fiyati DECIMAL(10, 2),             -- Hizmet fiyatı
+    Otel_id INT,                              -- İlişkili otel kimliği (Foreign Key)
+    FOREIGN KEY (Otel_id) REFERENCES Otel(Otel_id)  -- Otel tablosuna yabancı anahtar ilişkisi
+);	
+-- 8. Değerlendirme ve Yorum Tablosu
+CREATE TABLE Degerlendirme (
+    Degerlendirme_id INT IDENTITY PRIMARY KEY, -- Değerlendirme benzersiz kimlik numarası (otomatik artar)
+    Yorum TEXT,                                -- Yorum metni
+    Puan INT,                                  -- Puan (1-5 arasında)
+    Yorum_Tarihi DATE,                         -- Yorum tarihi
+    Musteri_id INT,                            -- İlişkili müşteri kimliği (Foreign Key)
+    Otel_id INT,                               -- İlişkili otel kimliği (Foreign Key)
+    FOREIGN KEY (Musteri_id) REFERENCES Musteri(Musteri_id),  -- Musteri tablosuna yabancı anahtar ilişkisi
+    FOREIGN KEY (Otel_id) REFERENCES Otel(Otel_id)  -- Otel tablosuna yabancı anahtar ilişkisi
+);
+
+
+-- 9. Personel Tablosu
+CREATE TABLE Personel (
+    Personel_id INT IDENTITY PRIMARY KEY,     -- Personel benzersiz kimlik numarası (otomatik artar)
+    Personel_Adi VARCHAR(100),                 -- Personel adı
+    Rol VARCHAR(50),                           -- Personel rolü (Müdür, Garson vb.)
+    Telefon VARCHAR(20),                       -- Personel telefon numarası
+    Email VARCHAR(100),                        -- Personel e-posta adresi
+    Otel_id INT,                               -- İlişkili otel kimliği (Foreign Key)
+    FOREIGN KEY (Otel_id) REFERENCES Otel(Otel_id)  -- Otel tablosuna yabancı anahtar ilişkisi
+);
+TRİGGER VE SAKLI YORDAM
+CREATE TRIGGER Trg_Degerlendirme_Insert
+ON Degerlendirme
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Degerlendirme_id INT;
+    DECLARE @Puan INT;
+    DECLARE @Yorum VARCHAR(MAX); -- Değiştirilen tip
+    DECLARE @Musteri_id INT;
+    DECLARE @Otel_id INT;
+
+    -- Yeni eklenen değerlendirmenin bilgilerini al
+    SELECT @Degerlendirme_id = Degerlendirme_id,
+           @Puan = Puan,
+           @Yorum = Yorum,  -- Burada VARCHAR(MAX) kullanıyoruz
+           @Musteri_id = Musteri_id,
+           @Otel_id = Otel_id
+    FROM INSERTED;
+
+    -- Eklenen değerlendirme bilgilerini yazdır
+    PRINT 'Yeni değerlendirme eklendi: Değerlendirme ID: ' + CAST(@Degerlendirme_id AS VARCHAR) + 
+          ', Puan: ' + CAST(@Puan AS VARCHAR) + 
+          ', Yorum: ' + @Yorum + 
+          ', Müşteri ID: ' + CAST(@Musteri_id AS VARCHAR) + 
+          ', Otel ID: ' + CAST(@Otel_id AS VARCHAR);
+END;
+
+
+USE [Veri_Tabanı_Proje_Otel1]
+GO
+/****** Object:  Trigger [dbo].[Trg_UpdateOtelPuan]    Script Date: 4.01.2025 14:50:29 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER TRIGGER [dbo].[Trg_UpdateOtelPuan]
+ON [dbo].[Degerlendirme]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    -- Değerlendirmeler tablosunda yapılan ekleme veya güncelleme işlemi sonrası
+    DECLARE @Otel_id INT;
+    DECLARE @Yeni_Puan DECIMAL(3, 2);
+    
+    -- Güncellenen/değerlendirilen otel ID'sini al
+    SELECT @Otel_id = Otel_id FROM INSERTED;
+
+    -- Otelin tüm yorumlarını al ve ortalama puanı hesapla
+    SELECT @Yeni_Puan = AVG(Puan) 
+    FROM Degerlendirme
+    WHERE Otel_id = @Otel_id;
+
+    -- Ortalama puanı otel tablosunda güncelle
+    UPDATE Otel
+    SET Puan = @Yeni_Puan
+    WHERE Otel_id = @Otel_id;
+END;
+
+
+CREATE TRIGGER Trg_Create_Fatura_On_Reservation
+ON Rezervasyon
+FOR INSERT
+AS
+BEGIN
+    DECLARE @Rezervasyon_id INT;
+    DECLARE @Musteri_id INT;
+    DECLARE @Oda_id INT;
+    DECLARE @Baslangic_Tarihi DATE;
+    DECLARE @Bitis_Tarihi DATE;
+    DECLARE @Fiyat DECIMAL(10, 2);
+
+    -- Insert edilen rezervasyon bilgilerini al
+    SELECT 
+        @Rezervasyon_id = Rezervasyon_id,
+        @Musteri_id = Musteri_id,
+        @Oda_id = Oda_id,
+        @Baslangic_Tarihi = Baslangic_Tarihi,
+        @Bitis_Tarihi = Bitis_Tarihi
+    FROM inserted;
+
+    -- Oda fiyatını almak için Oda tablosundan sorgu yap
+    SELECT @Fiyat = Fiyat 
+    FROM Oda 
+    WHERE Oda_id = @Oda_id;
+
+    -- Fatura tablosuna yeni fatura ekle
+    INSERT INTO Fatura (Tutar, Tarih, Rezervasyon_id, Musteri_id)
+    VALUES (@Fiyat * DATEDIFF(DAY, @Baslangic_Tarihi, @Bitis_Tarihi), GETDATE(), @Rezervasyon_id, @Musteri_id);
+END;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CREATE TRIGGER Trg_Fatura_Insert
+ON Fatura
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Fatura_id INT;
+    DECLARE @Tutar DECIMAL(10, 2);
+    DECLARE @Tarih DATE;
+    DECLARE @Musteri_id INT;
+
+    -- Yeni eklenen faturanın bilgilerini al
+    SELECT @Fatura_id = Fatura_id,   
+       @TUtar = Tutar, 
+         @Tarih = Tarih,
+           @Musteri_id = Musteri_id
+    FROM INSERTED;
+
+    -- Eklenen fatura bilgilerini yazdır
+    PRINT 'Yeni fatura eklendi: Fatura ID: ' + CAST(@Fatura_id AS VARCHAR) + 
+     
+
+
+
+CREATE TRIGGER Trg_Hizmet_Insert
+ON Hizmet
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Hizmet_id INT;
+    DECLARE @Hizmet_Turu VARCHAR(100);
+    DECLARE @Hizmet_Fiyati DECIMAL(10, 2);
+
+    -- Yeni eklenen hizmetin bilgilerini al
+    SELECT @Hizmet_id = Hizmet_id, 
+           @Hizmet_Turu = Hizmet_Turu, 
+           @Hizmet_Fiyati = Hizmet_Fiyati
+    FROM INSERTED;
+
+    -- Eklenen hizmet bilgilerini yazdır
+    PRINT 'Yeni hizmet eklendi: Hizmet ID: ' + CAST(@Hizmet_id AS VARCHAR) + 
+          ', Hizmet Türü: ' + @Hizmet_Turu + 
+          ', Fiyat: ' + CAST(@Hizmet_Fiyati AS VARCHAR);
+END;
+     ', Tutar: ' + CAST(@Tutar AS VARCHAR) + 
+          ', Tarih: ' + CAST(@Tarih AS VARCHAR) + 
+          ', Müşteri ID: ' + CAST(@Musteri_id AS VARCHAR);
+END;
+
+
+
+
+
+
+
+
+
+CREATE TRIGGER Trg_Musteri_Insert
+ON Musteri
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Musteri_id INT;
+    DECLARE @AdiSoyad VARCHAR(100);
+
+    -- Yeni eklenen müşterinin bilgilerini al
+    SELECT @Musteri_id = Musteri_id, @AdiSoyad = AdiSoyad
+    FROM INSERTED;
+
+    -- Eklenen müşteri bilgilerini yazdır
+    PRINT 'Yeni müşteri eklendi: Müşteri ID: ' + CAST(@Musteri_id AS VARCHAR) + ', Adı Soyadı: ' + @AdiSoyad;
+END;
+-- Trigger Oluşturma: Rezervasyon Eklendikçe Oda Durumunu Güncelleme
+
+
+CREATE TRIGGER Trg_Oda_Musaitlik
+ON Rezervasyon
+AFTER INSERT
+AS
+BEGIN
+    -- Yeni rezervasyon yapılan oda için Musaitlik durumunu güncelle
+    UPDATE Oda
+    SET Musaitlik = 0  -- Oda dolu
+    FROM Oda o
+    INNER JOIN inserted i ON o.Oda_id = i.Oda_id
+END;
+
+SAKLI YORDAM
+-- 1. Oda Durumunu Güncelleyen Saklı Yordam
+CREATE PROCEDURE OdaDurumuGuncelle
+    @Oda_id INT,               -- Oda ID
+    @Durum VARCHAR(20)         -- Oda durumu: 'Dolu' veya 'Boş'
+AS
+BEGIN
+    -- Odanın mevcut durumunu kontrol et
+    IF EXISTS (SELECT 1 FROM Oda WHERE Oda_id = @Oda_id)
+    BEGIN
+        -- Oda durumu 'Dolu' ise oda bilgilerini güncelle
+        IF @Durum = 'Dolu'
+        BEGIN
+            UPDATE Oda
+            SET Musaitlik = 'Dolu'
+            WHERE Oda_id = @Oda_id;
+            
+            PRINT 'Oda durumu Dolu olarak güncellenmiştir.';
+        END
+        -- Oda durumu 'Boş' ise oda bilgilerini güncelle
+        ELSE IF @Durum = 'Boş'
+        BEGIN
+            UPDATE Oda
+            SET Musaitlik = 'Boş'
+            WHERE Oda_id = @Oda_id;
+            
+            PRINT 'Oda durumu Boş olarak güncellenmiştir.';
+        END
+        ELSE
+        BEGIN
+            PRINT 'Geçersiz oda durumu. Lütfen "Dolu" veya "Boş" olarak belirtin.';
+        END
+    END
+    ELSE
+    BEGIN
+        PRINT 'Oda bulunamadı. Lütfen geçerli bir oda ID si girin.';
+    END
+END;
+
+
+CREATE TRIGGER Trg_Unique_Oda_Ozellikleri
+ON Oda_Ozellikleri
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Oda_id INT;
+    DECLARE @Ozellik_Adi VARCHAR(100);
+
+    -- Yeni eklenen oda özelliği bilgilerini al
+    SELECT @Oda_id = Oda_id, @Ozellik_Adi = Ozellik_Adi
+    FROM INSERTED;
+
+    -- Aynı oda için aynı özelliğin zaten eklenip eklenmediğini kontrol et
+    IF EXISTS (
+        SELECT 1
+        FROM Oda_Ozellikleri
+        WHERE Oda_id = @Oda_id AND Ozellik_Adi = @Ozellik_Adi
+    )
+    BEGIN
+        -- Eğer aynı oda için aynı özellik varsa, hata mesajı döndür
+        RAISERROR('Bu oda için bu özellik zaten eklenmiş, tekrar eklenemez.', 16, 1);
+        ROLLBACK TRANSACTION; -- Özellik ekleme işlemini iptal et
+    END
+    ELSE
+    BEGIN
+        -- Özellik benzersizse, işlemi tamamla
+        PRINT 'Oda özelliği başarıyla eklendi.';
+    END
+END;
+
+CREATE TRIGGER Trg_OdaOzellikleri_Insert
+ON Oda_Ozellikleri
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Oda_id INT;
+    DECLARE @Ozellik_Adi VARCHAR(100);
+
+    -- Yeni eklenen satırın oda_id ve özellik adını al
+    SELECT @Oda_id = Oda_id, @Ozellik_Adi = Ozellik_Adi
+    FROM INSERTED;
+
+    -- Eklenen veri ile ilgili işlemler
+    PRINT 'Yeni özellik eklendi: Oda ID: ' + CAST(@Oda_id AS VARCHAR) + ', Özellik: ' + @Ozellik_Adi;
+
+    -- Eklenen veriyi başka bir tabloya loglamak isterseniz:
+    -- INSERT INTO LogTablosu (Oda_id, Ozellik_Adi, Islem_Tarihi)
+    -- VALUES (@Oda_id, @Ozellik_Adi, GETDATE());
+END;
+
+
+CREATE TRIGGER Trg_Otel_Insert
+ON Otel
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Otel_id INT;
+    DECLARE @Otel_Adi VARCHAR(100);
+
+    -- Yeni eklenen otelin bilgilerini al
+    SELECT @Otel_id = Otel_id, @Otel_Adi = Otel_Adi
+    FROM INSERTED;
+
+    -- Eklenen otel bilgilerini yazdır
+    PRINT 'Yeni otel eklendi: Otel ID: ' + CAST(@Otel_id AS VARCHAR) + ', Otel Adı: ' + @Otel_Adi;
+END;
+
+CREATE PROCEDURE GetPersonelByRol
+    @Rol VARCHAR(50)
+AS
+BEGIN
+    SELECT Personel_Adi, Rol, Telefon, Email
+    FROM dbo.Personel
+    WHERE Rol = @Rol;
+END;
+CREATE TRIGGER Trg_UpdateOtelPuan
+ON Degerlendirme
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    -- Değerlendirmeler tablosunda yapılan ekleme veya güncelleme işlemi sonrası
+    DECLARE @Otel_id INT;
+    DECLARE @Yeni_Puan DECIMAL(3, 2);
+    
+    -- Güncellenen/değerlendirilen otel ID'sini al
+    SELECT @Otel_id = Otel_id FROM INSERTED;
+
+    -- Otelin tüm yorumlarını al ve ortalama puanı hesapla
+    SELECT @Yeni_Puan = AVG(Puan) 
+    FROM Degerlendirme
+    WHERE Otel_id = @Otel_id;
+
+    -- Ortalama puanı otel tablosunda güncelle
+    UPDATE Otel
+    SET Puan = @Yeni_Puan
+    WHERE Otel_id = @Otel_id;
+END;
+
+CREATE TRIGGER Trg_Prevent_Duplicate_Reservation
+ON Rezervasyon
+FOR INSERT
+AS
+BEGIN
+    -- Rezervasyon yapılmaya çalışılan müşteri, daha önce bir rezervasyon yapmış mı kontrol et
+    IF EXISTS (SELECT 1 
+               FROM inserted i 
+               INNER JOIN Rezervasyon r ON i.Musteri_id = r.Musteri_id)
+    BEGIN
+        RAISERROR('Bu müşteri zaten rezervasyon yapmış.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+END;
+-- 1. Saklı Yordamın Oluşturulması
+CREATE PROCEDURE RezervasyonOlustur
+    @Musteri_id INT,           -- Müşteri ID
+    @Oda_id INT,               -- Oda ID
+    @Baslangic_Tarihi DATE,    -- Rezervasyon Başlangıç Tarihi
+    @Bitis_Tarihi DATE         -- Rezervasyon Bitiş Tarihi
+AS
+BEGIN
+    -- Rezervasyon Tablosuna Veri Ekleme
+    INSERT INTO Rezervasyon (Musteri_id, Oda_id, Baslangic_Tarihi, Bitis_Tarihi)
+    VALUES (@Musteri_id, @Oda_id, @Baslangic_Tarihi, @Bitis_Tarihi);
+    
+    -- Fatura Tablosuna Veri Ekleme (Fatura Tutarı burada örnek olarak 100 TL olarak belirlenmiştir)
+    DECLARE @Fatura_Tutar DECIMAL(10, 2) = 100.00;
+    INSERT INTO Fatura (Rezervasyon_id, Musteri_id, Tutar, Tarih)
+    VALUES (SCOPE_IDENTITY(), @Musteri_id, @Fatura_Tutar, GETDATE());
+    
+    -- Rezervasyon ve Fatura işlemlerini bildiren bir çıktı
+    PRINT 'Rezervasyon ve fatura işlemi başarılı bir şekilde tamamlandı.';
+END;
+
+CREATE TRIGGER Trg_Rezervasyon_Insert
+ON Rezervasyon
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Oda_id INT;
+    DECLARE @Baslangic_Tarihi DATE;
+    DECLARE @Bitis_Tarihi DATE;
+
+    -- Yeni eklenen rezervasyon bilgilerini al
+    SELECT @Oda_id = Oda_id,
+           @Baslangic_Tarihi = Baslangic_Tarihi,
+           @Bitis_Tarihi = Bitis_Tarihi
+    FROM INSERTED;
+
+    -- Aynı odada, yeni rezervasyonun tarih aralığıyla çakışan bir rezervasyon olup olmadığını kontrol et
+    IF EXISTS (
+        SELECT 1
+        FROM Rezervasyon
+        WHERE Oda_id = @Oda_id
+          AND (
+              (Baslangic_Tarihi <= @Bitis_Tarihi AND Bitis_Tarihi >= @Baslangic_Tarihi)
+          )
+    )
+    BEGIN
+        -- Eğer çakışma varsa, hata mesajı döndür
+        RAISERROR('Bu oda, belirtilen tarihlerde zaten rezerve edilmiştir.', 16, 1);
+        ROLLBACK TRANSACTION; -- Rezervasyonu iptal et
+    END
+    ELSE
+    BEGIN
+        -- Çakışma yoksa, işlemi tamamla
+        PRINT 'Yeni rezervasyon başarıyla eklendi.';
+    END
+END;
+
+
+
+TRANSACTION YÖNETİMİ
+BEGIN TRY
+    BEGIN TRANSACTION; -- Transaction başlat
+
+    -- 1. Rezervasyon Ekleme
+    INSERT INTO Rezervasyon (Baslangic_Tarihi, Bitis_Tarihi, Musteri_id, Oda_id)
+    VALUES ('2025-01-10', '2025-01-15', 1, 33);
+
+    -- 2. Fatura Ekleme (Rezervasyon işlemiyle birlikte)
+    DECLARE @Rezervasyon_id INT;
+    SELECT @Rezervasyon_id = Rezervasyon_id
+    FROM Rezervasyon
+    WHERE Musteri_id = 1 AND Oda_id = 33;  -- Rezervasyonun son eklenen ID'sini al
+
+    INSERT INTO Fatura (Rezervasyon_id, Tutar, Tarih)
+    VALUES (@Rezervasyon_id, 1000.00, GETDATE());  -- Fatura için örnek veri
+
+    COMMIT TRANSACTION; -- Her iki işlem de başarılı ise, transaction'ı onayla
+END TRY
+BEGIN CATCH
+    ROLLBACK TRANSACTION; -- Bir hata oluşursa, işlemleri geri al
+    PRINT 'Hata meydana geldi: ' + ERROR_MESSAGE(); -- Hata mesajını yazdır
+END CATCH;
+
